@@ -113,6 +113,10 @@ async function handleSimulate() {
   }
 }
 
+function getSlotPick(userId: number, position: string) {
+  return picks.value.find((p: any) => p.userId === userId && p.assignedPosition === position) || null;
+}
+
 function copyShareLink() {
   navigator.clipboard.writeText(shareUrl.value);
 }
@@ -169,20 +173,34 @@ function copyShareLink() {
       </Message>
     </div>
 
-    <!-- Draft Picks -->
+    <!-- Draft Picks — Position Slot Cards -->
     <div class="mb-6">
       <h3 class="text-lg font-semibold mb-2">Draft Picks</h3>
-      <div class="overflow-x-auto">
-        <DataTable :value="picks" stripedRows size="small">
-          <Column field="pickNumber" header="#" style="width: 3rem" />
-          <Column header="Team">
-            <template #body="{ data }">
-              {{ participants.find((p: any) => p.userId === data.userId)?.displayName }}
-            </template>
-          </Column>
-          <Column field="playerName" header="Player" />
-          <Column field="assignedPosition" header="Position" />
-        </DataTable>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div
+          v-for="p in participants"
+          :key="p.userId"
+          class="rounded-lg border border-border p-4"
+          :class="{ 'ring-2 ring-court-orange': draft?.status === 'drafting' && currentTurn?.userId === p.userId }"
+        >
+          <div class="text-sm font-bold mb-3 uppercase tracking-wide text-text-secondary">{{ p.displayName }}</div>
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="pos in POSITIONS"
+              :key="pos"
+              class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+              :class="getSlotPick(p.userId, pos)
+                ? 'bg-court-orange/15 border border-court-orange/40'
+                : 'border-2 border-dashed border-border text-text-muted'"
+            >
+              <span class="font-bold w-8">{{ pos }}</span>
+              <span v-if="getSlotPick(p.userId, pos)" class="font-semibold text-text-primary">
+                {{ getSlotPick(p.userId, pos)!.playerName }}
+              </span>
+              <span v-else class="italic">—</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

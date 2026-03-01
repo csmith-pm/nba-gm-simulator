@@ -218,6 +218,9 @@ export async function getPlayerPool(criteria: DraftCriteria, options: {
   if (search) {
     conditions.push(ilike(players.name, `%${search}%`));
   }
+  if (excludePlayerIds.length > 0) {
+    conditions.push(sql`${players.id} NOT IN (${sql.join(excludePlayerIds.map(id => sql`${id}`), sql`, `)})`);
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
