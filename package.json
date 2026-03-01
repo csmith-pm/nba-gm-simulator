@@ -4,7 +4,7 @@
   "scripts": {
     "dev:server": "pnpm --filter @nba-gm/server dev",
     "dev:client": "pnpm --filter @nba-gm/client dev",
-    "dev": "pnpm run --parallel dev:server dev:client",
+    "dev": "pnpm --filter @nba-gm/server dev & pnpm --filter @nba-gm/client dev",
     "build": "pnpm --filter @nba-gm/shared build && pnpm --filter @nba-gm/server build && pnpm --filter @nba-gm/client build",
     "db:generate": "pnpm --filter @nba-gm/server db:generate",
     "db:migrate": "pnpm --filter @nba-gm/server db:migrate",

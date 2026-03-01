@@ -102,6 +102,9 @@ def ingest():
     # Filter to players who have played at least one game
     active_players = all_players[all_players["TO_YEAR"].notna() & (all_players["TO_YEAR"] != "")]
 
+    # Filter to modern era (career start >= 2001)
+    active_players = active_players[active_players["FROM_YEAR"].astype(int) >= 2001]
+
     with conn.cursor() as cur:
         # Check which players we already have
         cur.execute("SELECT nba_id FROM players")
