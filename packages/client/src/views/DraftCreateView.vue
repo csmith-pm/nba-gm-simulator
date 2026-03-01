@@ -7,6 +7,7 @@ import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Message from 'primevue/message';
+import Card from 'primevue/card';
 
 const router = useRouter();
 const draftStore = useDraftStore();
@@ -44,41 +45,47 @@ async function handleCreate() {
 
 <template>
   <div class="max-w-lg mx-auto mt-8">
-    <h2 class="text-2xl font-bold mb-6">Create New Draft</h2>
-    <Message v-if="error" severity="error" class="mb-4">{{ error }}</Message>
-    <form @submit.prevent="handleCreate" class="flex flex-col gap-4">
-      <div class="flex flex-col gap-1">
-        <label for="name">Draft Name</label>
-        <InputText id="name" v-model="name" required placeholder="e.g. 90s Legends Draft" />
-      </div>
+    <Card>
+      <template #title>
+        <h2 class="text-3xl font-black">Create New Draft</h2>
+      </template>
+      <template #content>
+        <Message v-if="error" severity="error" class="mb-4">{{ error }}</Message>
+        <form @submit.prevent="handleCreate" class="flex flex-col gap-4">
+          <div class="flex flex-col gap-1">
+            <label for="name" class="text-sm font-semibold text-text-secondary">Draft Name</label>
+            <InputText id="name" v-model="name" required placeholder="e.g. 90s Legends Draft" />
+          </div>
 
-      <div class="flex items-center gap-2">
-        <Checkbox v-model="useYearRange" :binary="true" inputId="yearRange" />
-        <label for="yearRange">Filter by active years</label>
-      </div>
-      <div v-if="useYearRange" class="flex gap-4 pl-6">
-        <div class="flex flex-col gap-1">
-          <label>Start Year</label>
-          <InputNumber v-model="startYear" :min="1946" :max="2026" :useGrouping="false" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label>End Year</label>
-          <InputNumber v-model="endYear" :min="1946" :max="2026" :useGrouping="false" />
-        </div>
-      </div>
+          <div class="flex items-center gap-2">
+            <Checkbox v-model="useYearRange" :binary="true" inputId="yearRange" />
+            <label for="yearRange" class="text-sm font-semibold text-text-secondary">Filter by active years</label>
+          </div>
+          <div v-if="useYearRange" class="flex gap-4 pl-6">
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-semibold text-text-secondary">Start Year</label>
+              <InputNumber v-model="startYear" :min="1946" :max="2026" :useGrouping="false" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-semibold text-text-secondary">End Year</label>
+              <InputNumber v-model="endYear" :min="1946" :max="2026" :useGrouping="false" />
+            </div>
+          </div>
 
-      <div class="flex items-center gap-2">
-        <Checkbox v-model="useDraftClass" :binary="true" inputId="draftClass" />
-        <label for="draftClass">Filter by draft class</label>
-      </div>
-      <div v-if="useDraftClass" class="pl-6">
-        <div class="flex flex-col gap-1">
-          <label>Draft Class Year</label>
-          <InputNumber v-model="draftClassYear" :min="1947" :max="2025" :useGrouping="false" />
-        </div>
-      </div>
+          <div class="flex items-center gap-2">
+            <Checkbox v-model="useDraftClass" :binary="true" inputId="draftClass" />
+            <label for="draftClass" class="text-sm font-semibold text-text-secondary">Filter by draft class</label>
+          </div>
+          <div v-if="useDraftClass" class="pl-6">
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-semibold text-text-secondary">Draft Class Year</label>
+              <InputNumber v-model="draftClassYear" :min="1947" :max="2025" :useGrouping="false" />
+            </div>
+          </div>
 
-      <Button type="submit" label="Create Draft" :loading="draftStore.loading" class="mt-4" />
-    </form>
+          <Button type="submit" label="Create Draft" :loading="draftStore.loading" class="mt-4" />
+        </form>
+      </template>
+    </Card>
   </div>
 </template>

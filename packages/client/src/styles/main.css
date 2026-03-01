@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* ── Theme Tokens ── */
+@theme {
+  --color-court-orange: #E8601C;
+  --color-court-orange-light: #FFF3ED;
+  --color-surface: #F8F9FA;
+  --color-surface-card: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+  --font-family-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* ── Base ── */
+body {
+  font-family: var(--font-family-sans);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* ── Sporty Typography ── */
+h1, h2, h3, h4 {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+}
+
+/* ── PrimeVue Overrides ── */
+
+/* DataTable headers */
+.p-datatable .p-datatable-thead > tr > th {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+/* Card */
+.p-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.p-card:hover {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+  transform: translateY(-2px);
+}
+
+/* Primary Buttons → orange */
+.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outlined):not(.p-button-plain) {
+  background: var(--color-court-orange);
+  border-color: var(--color-court-orange);
+}
+.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outlined):not(.p-button-plain):hover {
+  background: #D4530F;
+  border-color: #D4530F;
+}
+.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outlined):not(.p-button-plain):focus-visible {
+  outline-color: var(--color-court-orange);
+}
+
+/* Tags */
+.p-tag {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* Menubar */
+.p-menubar {
+  background: var(--color-surface-card);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+}

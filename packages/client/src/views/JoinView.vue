@@ -21,11 +21,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center mt-12">
+  <div class="mt-24 flex flex-col items-center">
     <Message v-if="error" severity="error">{{ error }}</Message>
     <div v-else class="flex flex-col items-center gap-4">
       <ProgressSpinner />
-      <p>Joining draft...</p>
+      <p class="font-semibold text-lg">Joining draft...</p>
+      <p class="text-sm text-text-muted">Connecting you to the lobby</p>
     </div>
   </div>
 </template>

@@ -23,16 +23,17 @@ async function handleLogout() {
 </script>
 
 <template>
-  <div class="app-layout">
-    <Menubar :model="menuItems">
+  <div class="min-h-screen flex flex-col bg-surface">
+    <Menubar :model="menuItems" class="sticky top-0 z-50">
       <template #start>
-        <span class="font-bold text-xl cursor-pointer" @click="router.push('/')">
+        <span class="font-black text-xl uppercase tracking-tight cursor-pointer flex items-center gap-2" @click="router.push('/')">
+          <i class="pi pi-bolt text-court-orange"></i>
           NBA GM Simulator
         </span>
       </template>
       <template #end>
         <div v-if="auth.isAuthenticated" class="flex items-center gap-2">
-          <span class="text-sm">{{ auth.user?.displayName }}</span>
+          <span class="text-sm text-text-secondary hidden sm:inline">{{ auth.user?.displayName }}</span>
           <Button label="Logout" icon="pi pi-sign-out" severity="secondary" size="small" @click="handleLogout" />
         </div>
         <div v-else class="flex gap-2">
@@ -42,23 +43,15 @@ async function handleLogout() {
       </template>
     </Menubar>
 
-    <main class="p-4 max-w-7xl mx-auto">
+    <main class="flex-1 py-6 px-4 max-w-7xl mx-auto w-full">
       <router-view />
     </main>
+
+    <footer class="border-t border-border py-6 px-4">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-text-muted">
+        <span class="font-bold uppercase tracking-tight">NBA GM Simulator</span>
+        <span>Draft legends. Build dynasties. Settle debates.</span>
+      </div>
+    </footer>
   </div>
 </template>
-
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f8f9fa;
-}
-.app-layout {
-  min-height: 100vh;
-}
-</style>

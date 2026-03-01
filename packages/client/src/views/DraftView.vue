@@ -100,14 +100,15 @@ function copyShareLink() {
 
 <template>
   <div v-if="draft">
-    <div class="flex justify-between items-start mb-6 flex-wrap gap-4">
-      <div>
+    <!-- Header -->
+    <div class="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6">
+      <div class="flex items-center gap-3 flex-wrap">
         <h2 class="text-2xl font-bold">{{ draft.name }}</h2>
-        <Tag :value="draft.status" :severity="draft.status === 'complete' ? 'success' : draft.status === 'drafting' ? 'info' : 'warn'" class="mt-1" />
+        <Tag :value="draft.status" :severity="draft.status === 'complete' ? 'success' : draft.status === 'drafting' ? 'info' : 'warn'" />
       </div>
-      <div class="flex gap-2">
-        <div v-if="draft.status === 'waiting'" class="flex gap-2 items-center">
-          <code class="text-xs bg-gray-100 p-2 rounded">{{ shareUrl }}</code>
+      <div class="flex gap-2 w-full lg:w-auto">
+        <div v-if="draft.status === 'waiting'" class="flex gap-2 items-center w-full lg:w-auto">
+          <InputText :modelValue="shareUrl" readonly class="flex-1 lg:w-80 text-xs font-mono" />
           <Button icon="pi pi-copy" severity="secondary" size="small" @click="copyShareLink" />
         </div>
         <Button v-if="draft.status === 'complete'" label="Simulate Series" icon="pi pi-play" @click="handleSimulate" :loading="seriesStore.loading" />
@@ -117,68 +118,85 @@ function copyShareLink() {
     <Message v-if="error" severity="error" class="mb-4">{{ error }}</Message>
 
     <!-- Participants -->
-    <div class="mb-4">
-      <h3 class="text-lg font-semibold mb-2">Participants</h3>
-      <div class="flex gap-4">
-        <div v-for="p in participants" :key="p.userId" class="flex items-center gap-2">
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold mb-3">Participants</h3>
+      <div class="flex gap-3 flex-wrap">
+        <div
+          v-for="p in participants"
+          :key="p.userId"
+          class="flex items-center gap-2 px-4 py-2 bg-surface-card rounded-lg border border-border"
+          :class="{ 'ring-2 ring-court-orange': currentTurn?.userId === p.userId }"
+        >
           <Tag :value="`#${p.pickOrder}`" severity="secondary" />
-          <span :class="{ 'font-bold': currentTurn?.userId === p.userId }">
-            {{ p.displayName }}
-          </span>
+          <span class="font-semibold">{{ p.displayName }}</span>
           <Tag v-if="currentTurn?.userId === p.userId" value="Picking..." severity="warn" />
         </div>
-        <div v-if="participants.length < 2" class="text-gray-400">Waiting for opponent...</div>
+        <div
+          v-if="participants.length < 2"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-border text-text-muted"
+        >
+          <i class="pi pi-user-plus"></i>
+          Waiting for opponent...
+        </div>
       </div>
+    </div>
+
+    <!-- Turn Indicator -->
+    <div v-if="draft.status === 'drafting' && isMyTurn" class="mb-4 px-4 py-3 bg-court-orange/10 border border-court-orange/30 rounded-lg">
+      <Message severity="info" class="m-0">It's your turn! Pick #{{ currentTurn?.pickNumber }}</Message>
     </div>
 
     <!-- Draft Picks -->
     <div class="mb-6">
       <h3 class="text-lg font-semibold mb-2">Draft Picks</h3>
-      <DataTable :value="picks" stripedRows size="small">
-        <Column field="pickNumber" header="#" style="width: 3rem" />
-        <Column header="Team">
-          <template #body="{ data }">
-            {{ participants.find((p: any) => p.userId === data.userId)?.displayName }}
-          </template>
-        </Column>
-        <Column field="playerName" header="Player" />
-        <Column field="assignedPosition" header="Position" />
-      </DataTable>
+      <div class="overflow-x-auto">
+        <DataTable :value="picks" stripedRows size="small">
+          <Column field="pickNumber" header="#" style="width: 3rem" />
+          <Column header="Team">
+            <template #body="{ data }">
+              {{ participants.find((p: any) => p.userId === data.userId)?.displayName }}
+            </template>
+          </Column>
+          <Column field="playerName" header="Player" />
+          <Column field="assignedPosition" header="Position" />
+        </DataTable>
+      </div>
     </div>
 
     <!-- Player Pool (visible during drafting) -->
     <div v-if="draft.status === 'drafting'">
       <h3 class="text-lg font-semibold mb-2">Available Players</h3>
-      <div v-if="isMyTurn" class="mb-2">
-        <Message severity="info">It's your turn! Pick #{{ currentTurn?.pickNumber }}</Message>
-      </div>
-      <div class="flex gap-2 mb-4">
-        <InputText v-model="search" placeholder="Search players..." @keyup.enter="searchPlayers" />
-        <Select v-model="selectedPosition" :options="['', ...POSITIONS]" placeholder="Position" @change="searchPlayers" />
-        <Button icon="pi pi-search" @click="searchPlayers" />
+      <div class="flex flex-col sm:flex-row gap-2 mb-4">
+        <InputText v-model="search" placeholder="Search players..." @keyup.enter="searchPlayers" class="flex-1" />
+        <div class="flex gap-2">
+          <Select v-model="selectedPosition" :options="['', ...POSITIONS]" placeholder="Position" @change="searchPlayers" />
+          <Button icon="pi pi-search" @click="searchPlayers" />
+        </div>
       </div>
 
-      <DataTable :value="draftStore.playerPool" stripedRows size="small">
-        <Column field="name" header="Player" />
-        <Column field="primaryPosition" header="Pos" style="width: 4rem" />
-        <Column header="PPG">
-          <template #body="{ data }">{{ data.careerStats.ppg.toFixed(1) }}</template>
-        </Column>
-        <Column header="RPG">
-          <template #body="{ data }">{{ data.careerStats.rpg.toFixed(1) }}</template>
-        </Column>
-        <Column header="APG">
-          <template #body="{ data }">{{ data.careerStats.apg.toFixed(1) }}</template>
-        </Column>
-        <Column header="Years">
-          <template #body="{ data }">{{ data.careerStartYear }}-{{ data.careerEndYear }}</template>
-        </Column>
-        <Column header="" style="width: 6rem" v-if="isMyTurn">
-          <template #body="{ data }">
-            <Button label="Draft" size="small" @click="openPickDialog(data)" />
-          </template>
-        </Column>
-      </DataTable>
+      <div class="overflow-x-auto">
+        <DataTable :value="draftStore.playerPool" stripedRows size="small">
+          <Column field="name" header="Player" />
+          <Column field="primaryPosition" header="Pos" style="width: 4rem" />
+          <Column header="PPG">
+            <template #body="{ data }">{{ data.careerStats.ppg.toFixed(1) }}</template>
+          </Column>
+          <Column header="RPG">
+            <template #body="{ data }">{{ data.careerStats.rpg.toFixed(1) }}</template>
+          </Column>
+          <Column header="APG">
+            <template #body="{ data }">{{ data.careerStats.apg.toFixed(1) }}</template>
+          </Column>
+          <Column header="Years">
+            <template #body="{ data }">{{ data.careerStartYear }}-{{ data.careerEndYear }}</template>
+          </Column>
+          <Column header="" style="width: 6rem" v-if="isMyTurn">
+            <template #body="{ data }">
+              <Button label="Draft" size="small" @click="openPickDialog(data)" />
+            </template>
+          </Column>
+        </DataTable>
+      </div>
     </div>
 
     <!-- Pick Dialog -->
@@ -186,7 +204,7 @@ function copyShareLink() {
       <div v-if="selectedPlayer" class="flex flex-col gap-4">
         <p class="font-semibold">{{ selectedPlayer.name }}</p>
         <div class="flex flex-col gap-1">
-          <label>Position</label>
+          <label class="text-sm font-semibold text-text-secondary">Position</label>
           <Select v-model="pickPosition" :options="availablePositions" placeholder="Select position" />
         </div>
         <Button label="Confirm Pick" @click="confirmPick" :disabled="!pickPosition" />
