@@ -46,3 +46,4 @@ scripts/           — Python data ingestion (nba_api → Postgres)
 ## Current Status
 - Phase 1-6 complete: project structure, shared types, DB schema, server routes/services, client views/stores, Python ingestion script
 - Local two-player mode implemented (PR #1)
+- Player pool table: pagination (25/page), debounced live search, clickable column sorting (PR #2)
