@@ -35,13 +35,14 @@ scripts/           — Python data ingestion (nba_api → Postgres)
 - Schema defined in `packages/server/src/db/schema/`
 
 ## Key Design Decisions
-- Snake draft order (1-2-2-1...) for 2-player drafts
+- Snake draft order (1-2-2-1...) for 2-player drafts — shared `getPickOrder()` helper in constants
 - 5 picks per team, one per position (PG/SG/SF/PF/C)
 - Simulation uses career average stats with position fit bonuses/penalties
 - Home court pattern: 2-2-1-1-1 for best-of-7
-- Polling (3s interval) for real-time draft updates (SSE upgrade planned)
+- Polling (3s interval) for real-time draft updates (SSE upgrade planned); skipped for local mode
 - Draft share codes use nanoid
+- **Local two-player mode**: `drafts.mode` column (`online` | `local`). Local mode creates a guest user (unhashable password `!`) for Player 2, starts drafting immediately with both participants. Both teams pick from the same screen — server assigns picks via snake order regardless of requesting userId. Local games excluded from leaderboard. SeriesView shows participant display names for both modes.
 
 ## Current Status
-- Phase 1-6 scaffolded: project structure, shared types, DB schema, server routes/services, client views/stores, Python ingestion script
-- Next: `npx pnpm install`, run docker-compose, generate+run migrations, ingest data, verify end-to-end flow
+- Phase 1-6 complete: project structure, shared types, DB schema, server routes/services, client views/stores, Python ingestion script
+- Local two-player mode implemented (PR #1)
