@@ -32,6 +32,12 @@ const sortOrder = ref<1 | -1>(1);
 const page = ref(1);
 let searchDebounce: ReturnType<typeof setTimeout> | undefined;
 
+// Coin toss state
+const coinTossFlipping = ref(false);
+const coinTossResult = ref<{ call: string; result: string; creatorWon: boolean } | null>(null);
+const coinTossShowResult = ref(false);
+const isCreator = computed(() => draft.value?.createdBy === auth.user?.id);
+
 const draft = computed(() => draftStore.currentDraft?.draft);
 const participants = computed(() => draftStore.currentDraft?.participants || []);
 const picks = computed(() => draftStore.currentDraft?.picks || []);
@@ -80,7 +86,7 @@ onMounted(async () => {
   } catch (e: any) {
     error.value = 'Failed to load player pool. Please refresh the page.';
   }
-  if (draft.value?.status === 'drafting' && !isLocal.value) {
+  if (!isLocal.value && (draft.value?.status === 'drafting' || draft.value?.status === 'coin_toss')) {
     draftStore.startPolling(draftId);
   }
 });
@@ -153,6 +159,29 @@ function getSlotPick(userId: number, position: string) {
   return picks.value.find((p: any) => p.userId === userId && p.assignedPosition === position) || null;
 }
 
+async function handleCoinToss(call: 'heads' | 'tails') {
+  coinTossFlipping.value = true;
+  try {
+    const result = await draftStore.callCoinToss(draftId, call);
+    coinTossResult.value = result;
+    // Wait for flip animation to complete
+    setTimeout(async () => {
+      coinTossShowResult.value = true;
+      // After showing result, transition to drafting
+      setTimeout(async () => {
+        await draftStore.fetchDraft(draftId);
+        await loadPlayers();
+        coinTossFlipping.value = false;
+        coinTossShowResult.value = false;
+        coinTossResult.value = null;
+      }, 2000);
+    }, 1500);
+  } catch (e: any) {
+    error.value = e.response?.data?.message || 'Failed to call coin toss';
+    coinTossFlipping.value = false;
+  }
+}
+
 function copyShareLink() {
   navigator.clipboard.writeText(shareUrl.value);
 }
@@ -164,7 +193,7 @@ function copyShareLink() {
     <div class="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6">
       <div class="flex items-center gap-3 flex-wrap">
         <h2 class="text-2xl font-bold">{{ draft.name }}</h2>
-        <Tag :value="draft.status" :severity="draft.status === 'complete' ? 'success' : draft.status === 'drafting' ? 'info' : 'warn'" />
+        <Tag :value="draft.status === 'coin_toss' ? 'coin toss' : draft.status" :severity="draft.status === 'complete' ? 'success' : draft.status === 'drafting' ? 'info' : 'warn'" />
       </div>
       <div class="flex gap-2 w-full lg:w-auto">
         <div v-if="draft.status === 'waiting' && !isLocal" class="flex gap-2 items-center w-full lg:w-auto">
@@ -198,6 +227,55 @@ function copyShareLink() {
           <i class="pi pi-user-plus"></i>
           Waiting for opponent...
         </div>
+      </div>
+    </div>
+
+    <!-- Coin Toss Phase -->
+    <div v-if="draft.status === 'coin_toss' || coinTossFlipping" class="mb-6">
+      <div class="flex flex-col items-center gap-6 py-12">
+        <!-- Coin animation -->
+        <div class="coin-container" :class="{ flipping: coinTossFlipping && !coinTossShowResult }">
+          <div class="coin" :class="coinTossShowResult && coinTossResult ? (coinTossResult.result === 'tails' ? 'show-tails' : '') : ''">
+            <div class="coin-face coin-heads">
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="38" fill="#F59E0B" stroke="#D97706" stroke-width="3"/>
+                <text x="40" y="46" text-anchor="middle" font-size="20" font-weight="bold" fill="#78350F">H</text>
+              </svg>
+            </div>
+            <div class="coin-face coin-tails">
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="38" fill="#3B82F6" stroke="#2563EB" stroke-width="3"/>
+                <text x="40" y="46" text-anchor="middle" font-size="20" font-weight="bold" fill="#EFF6FF">T</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result display -->
+        <div v-if="coinTossShowResult && coinTossResult" class="text-center coin-result-reveal">
+          <div class="text-2xl font-black mb-2">
+            {{ coinTossResult.result === 'heads' ? 'Heads' : 'Tails' }}!
+          </div>
+          <div class="text-lg text-text-secondary">
+            {{ coinTossResult.creatorWon ? 'You won the toss — you pick first!' : 'You lost the toss — opponent picks first.' }}
+          </div>
+        </div>
+
+        <!-- Call buttons (creator only, not yet flipping) -->
+        <template v-if="!coinTossFlipping">
+          <div v-if="isCreator || isLocal" class="text-center">
+            <h3 class="text-xl font-bold mb-4">Call the Coin Toss</h3>
+            <p class="text-text-secondary mb-6">Winner picks first in the draft</p>
+            <div class="flex gap-4 justify-center">
+              <Button label="Heads" icon="pi pi-circle" class="px-6 py-3 text-lg" severity="warn" @click="handleCoinToss('heads')" />
+              <Button label="Tails" icon="pi pi-circle-fill" class="px-6 py-3 text-lg" severity="info" @click="handleCoinToss('tails')" />
+            </div>
+          </div>
+          <div v-else class="text-center">
+            <h3 class="text-xl font-bold mb-2">Coin Toss</h3>
+            <p class="text-text-muted animate-pulse">Waiting for opponent to call the toss...</p>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -299,3 +377,55 @@ function copyShareLink() {
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+.coin-container {
+  perspective: 400px;
+  width: 80px;
+  height: 80px;
+}
+
+.coin {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease-out;
+}
+
+.coin-face {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  backface-visibility: hidden;
+}
+
+.coin-tails {
+  transform: rotateY(180deg);
+}
+
+.coin.show-tails {
+  transform: rotateY(180deg);
+}
+
+.coin-container.flipping .coin {
+  animation: coinFlip 1.5s ease-in-out;
+}
+
+@keyframes coinFlip {
+  0% { transform: rotateY(0deg) translateY(0); }
+  25% { transform: rotateY(900deg) translateY(-60px); }
+  50% { transform: rotateY(1800deg) translateY(-80px); }
+  75% { transform: rotateY(2520deg) translateY(-30px); }
+  100% { transform: rotateY(3240deg) translateY(0); }
+}
+
+.coin-result-reveal {
+  animation: fadeSlideUp 0.4s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

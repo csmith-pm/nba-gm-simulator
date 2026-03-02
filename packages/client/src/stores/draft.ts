@@ -44,6 +44,11 @@ export const useDraftStore = defineStore('draft', () => {
     playerPoolPage.value = res.data.page;
   }
 
+  async function callCoinToss(draftId: number, call: 'heads' | 'tails') {
+    const res = await api.callCoinToss(draftId, call);
+    return res.data.data;
+  }
+
   async function pick(draftId: number, playerId: number, position: string) {
     loading.value = true;
     try {
@@ -68,6 +73,6 @@ export const useDraftStore = defineStore('draft', () => {
 
   return {
     drafts, currentDraft, playerPool, playerPoolTotal, playerPoolPage, loading,
-    fetchDrafts, fetchDraft, create, join, fetchPlayers, pick, startPolling, stopPolling,
+    fetchDrafts, fetchDraft, create, join, fetchPlayers, callCoinToss, pick, startPolling, stopPolling,
   };
 });

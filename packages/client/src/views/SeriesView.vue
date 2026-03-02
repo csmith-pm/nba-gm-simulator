@@ -7,7 +7,9 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Card from 'primevue/card';
-import { SERIES_WINS_NEEDED } from '@nba-gm/shared';
+import Dialog from 'primevue/dialog';
+import { SERIES_WINS_NEEDED, MVP_WEIGHTS } from '@nba-gm/shared';
+import type { GamePlayerStats } from '@nba-gm/shared';
 
 const route = useRoute();
 const seriesStore = useSeriesStore();
@@ -19,6 +21,8 @@ const playingGameIdx = ref(-1); // index of game currently "playing" (showing an
 const seriesComplete = ref(false);
 const selectedGameIdx = ref<number | null>(null);
 const revealStarted = ref(false);
+const showMvpBanner = ref(false);
+const showMvpDialog = ref(false);
 
 onMounted(async () => {
   await seriesStore.fetchSeries(seriesId);
@@ -56,6 +60,71 @@ const winnerName = computed(() => {
   return s.value.winnerUserId === s.value.team1UserId ? team1Name.value : team2Name.value;
 });
 
+interface MvpCandidate {
+  playerId: number;
+  playerName: string;
+  position: string;
+  totalPoints: number;
+  totalRebounds: number;
+  totalAssists: number;
+  totalSteals: number;
+  totalBlocks: number;
+  totalFgMade: number;
+  gamesPlayed: number;
+  mvpScore: number;
+}
+
+const mvp = computed<MvpCandidate | null>(() => {
+  if (!allGames.value.length) return null;
+  const playerMap = new Map<number, MvpCandidate>();
+
+  for (const game of allGames.value) {
+    const log = game.gameLog as any;
+    if (!log) continue;
+    const allPlayers: GamePlayerStats[] = [...(log.team1Players || []), ...(log.team2Players || [])];
+    for (const p of allPlayers) {
+      const existing = playerMap.get(p.playerId);
+      if (existing) {
+        existing.totalPoints += p.points;
+        existing.totalRebounds += p.rebounds;
+        existing.totalAssists += p.assists;
+        existing.totalSteals += p.steals;
+        existing.totalBlocks += p.blocks;
+        existing.totalFgMade += p.fgMade;
+        existing.gamesPlayed += 1;
+      } else {
+        playerMap.set(p.playerId, {
+          playerId: p.playerId,
+          playerName: p.playerName,
+          position: p.position,
+          totalPoints: p.points,
+          totalRebounds: p.rebounds,
+          totalAssists: p.assists,
+          totalSteals: p.steals,
+          totalBlocks: p.blocks,
+          totalFgMade: p.fgMade,
+          gamesPlayed: 1,
+          mvpScore: 0,
+        });
+      }
+    }
+  }
+
+  let best: MvpCandidate | null = null;
+  for (const c of playerMap.values()) {
+    c.mvpScore =
+      c.totalPoints * MVP_WEIGHTS.PTS +
+      c.totalRebounds * MVP_WEIGHTS.REB +
+      c.totalAssists * MVP_WEIGHTS.AST +
+      c.totalSteals * MVP_WEIGHTS.STL +
+      c.totalBlocks * MVP_WEIGHTS.BLK +
+      c.totalFgMade * MVP_WEIGHTS.FGM;
+    if (!best || c.mvpScore > best.mvpScore) best = c;
+  }
+
+  return best;
+});
+
 const selectedGame = computed(() => {
   if (selectedGameIdx.value === null) return null;
   return revealedGames.value[selectedGameIdx.value] || null;
@@ -89,6 +158,11 @@ async function startReveal() {
 
   seriesComplete.value = true;
   selectedGameIdx.value = 0;
+
+  // Reveal MVP after a short delay for dramatic effect
+  setTimeout(() => {
+    showMvpBanner.value = true;
+  }, 800);
 }
 </script>
 
@@ -121,6 +195,16 @@ async function startReveal() {
           <div class="series-winner-banner inline-block px-6 py-2 rounded-full bg-court-orange text-white font-black text-lg tracking-wide">
             {{ winnerName }} Wins!
           </div>
+        </div>
+        <!-- Finals MVP -->
+        <div v-if="showMvpBanner && mvp" class="text-center mt-4 mvp-reveal">
+          <button
+            class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-surface-card border border-court-orange/50 text-text-primary font-bold text-base cursor-pointer hover:bg-court-orange/10 transition-colors"
+            @click="showMvpDialog = true"
+          >
+            <i class="pi pi-trophy text-court-orange"></i>
+            Finals MVP: {{ mvp.playerName }}
+          </button>
         </div>
       </template>
     </Card>
@@ -210,6 +294,52 @@ async function startReveal() {
         </template>
       </Card>
     </div>
+
+    <!-- MVP Detail Dialog -->
+    <Dialog v-model:visible="showMvpDialog" header="Finals MVP" modal :style="{ width: '28rem' }">
+      <div v-if="mvp" class="flex flex-col gap-4">
+        <div class="text-center">
+          <div class="text-2xl font-black">{{ mvp.playerName }}</div>
+          <div class="text-sm text-text-secondary">{{ mvp.position }}</div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="bg-surface-card rounded-lg p-3 border border-border">
+            <div class="text-xs text-text-muted uppercase">PPG</div>
+            <div class="text-lg font-bold">{{ (mvp.totalPoints / mvp.gamesPlayed).toFixed(1) }}</div>
+          </div>
+          <div class="bg-surface-card rounded-lg p-3 border border-border">
+            <div class="text-xs text-text-muted uppercase">RPG</div>
+            <div class="text-lg font-bold">{{ (mvp.totalRebounds / mvp.gamesPlayed).toFixed(1) }}</div>
+          </div>
+          <div class="bg-surface-card rounded-lg p-3 border border-border">
+            <div class="text-xs text-text-muted uppercase">APG</div>
+            <div class="text-lg font-bold">{{ (mvp.totalAssists / mvp.gamesPlayed).toFixed(1) }}</div>
+          </div>
+          <div class="bg-surface-card rounded-lg p-3 border border-border">
+            <div class="text-xs text-text-muted uppercase">SPG</div>
+            <div class="text-lg font-bold">{{ (mvp.totalSteals / mvp.gamesPlayed).toFixed(1) }}</div>
+          </div>
+          <div class="bg-surface-card rounded-lg p-3 border border-border">
+            <div class="text-xs text-text-muted uppercase">BPG</div>
+            <div class="text-lg font-bold">{{ (mvp.totalBlocks / mvp.gamesPlayed).toFixed(1) }}</div>
+          </div>
+          <div class="bg-surface-card rounded-lg p-3 border border-border">
+            <div class="text-xs text-text-muted uppercase">Games</div>
+            <div class="text-lg font-bold">{{ mvp.gamesPlayed }}</div>
+          </div>
+        </div>
+        <div class="text-center border-t border-border pt-3">
+          <div class="text-xs text-text-muted uppercase mb-1">Series Totals</div>
+          <div class="text-sm text-text-secondary">
+            {{ mvp.totalPoints }} PTS &middot;
+            {{ mvp.totalRebounds }} REB &middot;
+            {{ mvp.totalAssists }} AST &middot;
+            {{ mvp.totalSteals }} STL &middot;
+            {{ mvp.totalBlocks }} BLK
+          </div>
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -250,6 +380,21 @@ async function startReveal() {
   100% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+.mvp-reveal {
+  animation: mvpSlideIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes mvpSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

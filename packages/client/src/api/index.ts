@@ -33,6 +33,9 @@ export const getDraftPlayers = (draftId: number, params?: Record<string, any>) =
 export const makeDraftPick = (draftId: number, playerId: number, position: string) =>
   api.post<{ data: any }>(`/drafts/${draftId}/pick`, { playerId, position });
 
+export const callCoinToss = (draftId: number, call: 'heads' | 'tails') =>
+  api.post<{ data: { call: string; result: string; creatorWon: boolean } }>(`/drafts/${draftId}/coin-toss`, { call });
+
 // Series
 export const startSeries = (draftId: number) =>
   api.post<{ data: { series: Series; games: SeriesGame[] } }>(`/drafts/${draftId}/series`);

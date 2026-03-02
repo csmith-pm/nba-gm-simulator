@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { authGuard } from '../middleware/auth.js';
-import { createDraftSchema, makeDraftPickSchema } from '@nba-gm/shared';
+import { createDraftSchema, makeDraftPickSchema, coinTossCallSchema } from '@nba-gm/shared';
 import * as draftService from '../services/draft.js';
 
 export async function draftRoutes(app: FastifyInstance) {
@@ -60,6 +60,25 @@ export async function draftRoutes(app: FastifyInstance) {
     try {
       const result = await draftService.joinDraft(draft.id, request.user!.userId);
       return { data: { draftId: draft.id, ...result } };
+    } catch (e: any) {
+      return reply.status(400).send({ error: 'Bad request', message: e.message });
+    }
+  });
+
+  // Call coin toss
+  app.post<{ Params: { id: string } }>('/api/drafts/:id/coin-toss', { preHandler: authGuard }, async (request, reply) => {
+    const parsed = coinTossCallSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Validation error', message: parsed.error.message });
+    }
+
+    try {
+      const result = await draftService.callCoinToss(
+        parseInt(request.params.id),
+        request.user!.userId,
+        parsed.data.call,
+      );
+      return { data: result };
     } catch (e: any) {
       return reply.status(400).send({ error: 'Bad request', message: e.message });
     }
