@@ -6,5 +6,6 @@ export default defineConfig({
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL || 'postgresql://nbagm:nbagm_dev@localhost:5432/nba_gm_simulator',
+    ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
   },
 });

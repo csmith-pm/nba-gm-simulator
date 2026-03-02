@@ -15,25 +15,30 @@ export async function authRoutes(app: FastifyInstance) {
 
     const { email, password, displayName } = parsed.data;
 
-    const [existing] = await db.select().from(users).where(eq(users.email, email));
-    if (existing) {
-      return reply.status(409).send({ error: 'Conflict', message: 'Email already registered' });
+    try {
+      const [existing] = await db.select().from(users).where(eq(users.email, email));
+      if (existing) {
+        return reply.status(409).send({ error: 'Conflict', message: 'Email already registered' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const [user] = await db.insert(users).values({ email, passwordHash, displayName }).returning();
+
+      const token = signToken({ userId: user.id, email: user.email });
+
+      reply.setCookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+      });
+
+      return { data: { id: user.id, email: user.email, displayName: user.displayName } };
+    } catch (err) {
+      app.log.error(err, 'Registration failed');
+      return reply.status(500).send({ error: 'Internal Server Error', message: 'Registration failed. Please try again.' });
     }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-    const [user] = await db.insert(users).values({ email, passwordHash, displayName }).returning();
-
-    const token = signToken({ userId: user.id, email: user.email });
-
-    reply.setCookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    return { data: { id: user.id, email: user.email, displayName: user.displayName } };
   });
 
   app.post('/api/auth/login', async (request, reply) => {
@@ -43,27 +48,33 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const { email, password } = parsed.data;
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    if (!user) {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'Invalid credentials' });
+
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      if (!user) {
+        return reply.status(401).send({ error: 'Unauthorized', message: 'Invalid credentials' });
+      }
+
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) {
+        return reply.status(401).send({ error: 'Unauthorized', message: 'Invalid credentials' });
+      }
+
+      const token = signToken({ userId: user.id, email: user.email });
+
+      reply.setCookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60,
+      });
+
+      return { data: { id: user.id, email: user.email, displayName: user.displayName } };
+    } catch (err) {
+      app.log.error(err, 'Login failed');
+      return reply.status(500).send({ error: 'Internal Server Error', message: 'Login failed. Please try again.' });
     }
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'Invalid credentials' });
-    }
-
-    const token = signToken({ userId: user.id, email: user.email });
-
-    reply.setCookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60,
-    });
-
-    return { data: { id: user.id, email: user.email, displayName: user.displayName } };
   });
 
   app.post('/api/auth/logout', async (_request, reply) => {
@@ -71,12 +82,17 @@ export async function authRoutes(app: FastifyInstance) {
     return { data: { message: 'Logged out' } };
   });
 
-  app.get('/api/auth/me', { preHandler: authGuard }, async (request) => {
-    const [user] = await db.select({
-      id: users.id,
-      email: users.email,
-      displayName: users.displayName,
-    }).from(users).where(eq(users.id, request.user!.userId));
-    return { data: user };
+  app.get('/api/auth/me', { preHandler: authGuard }, async (request, reply) => {
+    try {
+      const [user] = await db.select({
+        id: users.id,
+        email: users.email,
+        displayName: users.displayName,
+      }).from(users).where(eq(users.id, request.user!.userId));
+      return { data: user };
+    } catch (err) {
+      app.log.error(err, 'Failed to fetch user');
+      return reply.status(500).send({ error: 'Internal Server Error', message: 'Failed to fetch user.' });
+    }
   });
 }
