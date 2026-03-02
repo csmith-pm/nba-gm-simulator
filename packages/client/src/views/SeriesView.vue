@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, nextTick } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useSeriesStore } from '@/stores/series';
 import { useDraftStore } from '@/stores/draft';
 import DataTable from 'primevue/datatable';
@@ -8,10 +8,12 @@ import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Card from 'primevue/card';
 import Dialog from 'primevue/dialog';
+import Button from 'primevue/button';
 import { SERIES_WINS_NEEDED, MVP_WEIGHTS } from '@nba-gm/shared';
 import type { GamePlayerStats } from '@nba-gm/shared';
 
 const route = useRoute();
+const router = useRouter();
 const seriesStore = useSeriesStore();
 const draftStore = useDraftStore();
 const seriesId = parseInt(route.params.id as string);
@@ -205,6 +207,12 @@ async function startReveal() {
             <i class="pi pi-trophy text-court-orange"></i>
             Finals MVP: {{ mvp.playerName }}
           </button>
+        </div>
+        <!-- Post-series navigation -->
+        <div v-if="seriesComplete" class="flex justify-center gap-3 mt-6 flex-wrap">
+          <Button label="Back to Draft" icon="pi pi-arrow-left" severity="secondary" @click="router.push(`/drafts/${s.draftId}`)" />
+          <Button label="New Draft" icon="pi pi-plus" severity="secondary" @click="router.push('/drafts/new')" />
+          <Button label="Leaderboard" icon="pi pi-trophy" @click="router.push('/leaderboard')" />
         </div>
       </template>
     </Card>

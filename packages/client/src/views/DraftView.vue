@@ -13,9 +13,11 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import Message from 'primevue/message';
+import { useToast } from 'primevue/usetoast';
 
 const route = useRoute();
 const router = useRouter();
+const toast = useToast();
 const draftStore = useDraftStore();
 const auth = useAuthStore();
 const seriesStore = useSeriesStore();
@@ -184,6 +186,16 @@ async function handleCoinToss(call: 'heads' | 'tails') {
 
 function copyShareLink() {
   navigator.clipboard.writeText(shareUrl.value);
+  toast.add({ severity: 'success', summary: 'Link copied!', life: 2000 });
+}
+
+const hasActiveFilters = computed(() => !!search.value || !!selectedPosition.value);
+
+function clearFilters() {
+  search.value = '';
+  selectedPosition.value = '';
+  page.value = 1;
+  loadPlayers();
 }
 </script>
 
@@ -196,9 +208,13 @@ function copyShareLink() {
         <Tag :value="draft.status === 'coin_toss' ? 'coin toss' : draft.status" :severity="draft.status === 'complete' ? 'success' : draft.status === 'drafting' ? 'info' : 'warn'" />
       </div>
       <div class="flex gap-2 w-full lg:w-auto">
-        <div v-if="draft.status === 'waiting' && !isLocal" class="flex gap-2 items-center w-full lg:w-auto">
-          <InputText :modelValue="shareUrl" readonly class="flex-1 lg:w-80 text-xs font-mono" />
-          <Button icon="pi pi-copy" severity="secondary" size="small" @click="copyShareLink" />
+        <div v-if="draft.status === 'waiting' && !isLocal" class="flex flex-col gap-1 w-full lg:w-auto">
+          <label class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Share with your opponent</label>
+          <div class="flex gap-2 items-center">
+            <InputText :modelValue="shareUrl" readonly class="flex-1 lg:w-80 text-xs font-mono" />
+            <Button icon="pi pi-copy" severity="secondary" size="small" v-tooltip.top="'Copy link'" @click="copyShareLink" />
+          </div>
+          <p class="text-xs text-text-muted m-0">They'll join automatically when they open this link.</p>
         </div>
         <Button v-if="draft.status === 'complete'" label="Simulate Series" icon="pi pi-play" @click="handleSimulate" :loading="seriesStore.loading" />
       </div>
@@ -362,6 +378,11 @@ function copyShareLink() {
           </Column>
         </DataTable>
       </div>
+      <div v-if="draftStore.playerPool.length === 0 && hasActiveFilters" class="text-center py-8">
+        <i class="pi pi-search text-4xl text-text-muted mb-3"></i>
+        <p class="text-text-secondary font-semibold mb-2">No players match your filters</p>
+        <Button label="Clear filters" severity="secondary" size="small" @click="clearFilters" />
+      </div>
     </div>
 
     <!-- Pick Dialog -->
@@ -375,6 +396,17 @@ function copyShareLink() {
         <Button label="Confirm Pick" @click="confirmPick" :disabled="!pickPosition" />
       </div>
     </Dialog>
+  </div>
+  <div v-else class="flex flex-col gap-6">
+    <div class="h-8 w-64 bg-surface-card rounded animate-pulse"></div>
+    <div class="flex gap-3">
+      <div class="h-12 w-40 bg-surface-card rounded-lg animate-pulse"></div>
+      <div class="h-12 w-40 bg-surface-card rounded-lg animate-pulse"></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="h-48 bg-surface-card rounded-lg animate-pulse"></div>
+      <div class="h-48 bg-surface-card rounded-lg animate-pulse"></div>
+    </div>
   </div>
 </template>
 
