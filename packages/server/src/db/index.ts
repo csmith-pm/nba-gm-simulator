@@ -8,6 +8,7 @@ const useSSL = process.env.DATABASE_SSL === 'true' || (process.env.NODE_ENV === 
 
 const client = postgres(connectionString, {
   ssl: useSSL ? 'require' : false,
+  max: parseInt(process.env.DB_POOL_SIZE || '20'),
 });
 export const db = drizzle(client, { schema });
 export type Database = typeof db;

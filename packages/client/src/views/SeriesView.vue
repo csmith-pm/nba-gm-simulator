@@ -201,10 +201,10 @@ async function startReveal() {
         <!-- Finals MVP -->
         <div v-if="showMvpBanner && mvp" class="text-center mt-4 mvp-reveal">
           <button
-            class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-surface-card border border-court-orange/50 text-text-primary font-bold text-base cursor-pointer hover:bg-court-orange/10 transition-colors"
+            class="inline-flex items-center gap-3 px-8 py-3 rounded-full bg-court-orange/10 border-2 border-court-orange text-text-primary font-black text-lg cursor-pointer hover:bg-court-orange/20 transition-colors mvp-glow"
             @click="showMvpDialog = true"
           >
-            <i class="pi pi-trophy text-court-orange"></i>
+            <i class="pi pi-trophy text-court-orange text-xl"></i>
             Finals MVP: {{ mvp.playerName }}
           </button>
         </div>
@@ -403,6 +403,19 @@ async function startReveal() {
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.mvp-glow {
+  animation: mvpGlow 2s ease-in-out 3;
+}
+
+@keyframes mvpGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), 0 0 40px rgba(245, 158, 11, 0.3);
   }
 }
 </style>

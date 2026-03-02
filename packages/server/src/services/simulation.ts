@@ -103,29 +103,35 @@ function simulateTeamPlayerStats(team: TeamPlayer[], teamScore: number): GamePla
     const steals = Math.max(0, Math.round(normalRandom(player.stats.spg, player.stats.spg * 0.4)));
     const blocks = Math.max(0, Math.round(normalRandom(player.stats.bpg, player.stats.bpg * 0.4)));
 
-    // Derive shot makes/attempts from points so the math checks out:
-    // points = (fgMade - threeMade) * 2 + threeMade * 3 + ftMade
+    // Start from realistic attempt counts, then derive makes
     const ftPct = clamp(normalRandom(player.stats.ftPct, 0.08), 0.3, 1.0);
-    const ftMade = Math.max(0, Math.round(points * 0.2 * ftPct));
-    const ftAttempted = ftPct > 0 ? Math.max(ftMade, Math.round(ftMade / ftPct)) : 0;
+    const fgPct = clamp(normalRandom(player.stats.fgPct, 0.06), 0.25, 0.70);
+    const threePct = clamp(normalRandom(player.stats.threePct, 0.08), 0.05, 0.50);
 
-    const fgPoints = points - ftMade; // Points from field goals
-    const threePct = clamp(normalRandom(player.stats.threePct, 0.08), 0, 0.55);
-    const fgPct = clamp(normalRandom(player.stats.fgPct, 0.06), 0.2, 0.75);
+    // Estimate FTA: ~25% of points come from the free throw line
+    const ftAttempted = clamp(Math.round(normalRandom(points * 0.25 / ftPct, 1.5)), 0, 15);
+    const ftMade = Math.min(ftAttempted, Math.max(0, Math.round(ftAttempted * ftPct)));
 
-    // Estimate 3-point share of field goals
+    // Remaining points come from field goals
+    const fgPoints = Math.max(0, points - ftMade);
+
+    // Estimate total FGA from field goal points and shooting %
+    // Average points per FGA ≈ fgPct * ~2.2 (mix of 2s and 3s)
+    const avgPtsPerFga = fgPct * 2.2;
+    const fgAttempted = clamp(
+      Math.round(normalRandom(fgPoints / Math.max(avgPtsPerFga, 0.5), 2)),
+      4, 30
+    );
+
+    // Split FGA into 2pt/3pt using threeShare
     const threeShare = clamp(normalRandom(0.3, 0.1), 0.05, 0.6);
-    // Solve: fgPoints = (fgMade - threeMade) * 2 + threeMade * 3
-    //       = fgMade * 2 + threeMade * 1
-    // So: fgMade = (fgPoints - threeMade) / 2
-    // We pick threeMade first, then derive fgMade
-    const threeMade = Math.max(0, Math.min(
-      Math.round(fgPoints / 3 * threeShare), // rough estimate
-      Math.floor(fgPoints / 3) // can't exceed this or fgMade goes negative
-    ));
-    const fgMade = Math.max(threeMade, Math.round((fgPoints - threeMade) / 2 + threeMade));
-    const fgAttempted = fgPct > 0 ? Math.max(fgMade, Math.round(fgMade / fgPct)) : fgMade;
-    const threeAttempted = threePct > 0 ? Math.max(threeMade, Math.round(threeMade / threePct)) : threeMade;
+    const threeAttempted = Math.max(0, Math.round(fgAttempted * threeShare));
+    const twoAttempted = fgAttempted - threeAttempted;
+
+    // Derive makes from attempts × percentage (makes ≤ attempts)
+    const threeMade = Math.min(threeAttempted, Math.max(0, Math.round(threeAttempted * threePct)));
+    const twoMade = Math.min(twoAttempted, Math.max(0, Math.round(twoAttempted * fgPct)));
+    const fgMade = twoMade + threeMade;
 
     return {
       playerId: player.playerId,

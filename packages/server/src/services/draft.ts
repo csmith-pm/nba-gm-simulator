@@ -311,20 +311,25 @@ export async function callCoinToss(draftId: number, userId: number, call: 'heads
   const result: 'heads' | 'tails' = Math.random() < 0.5 ? 'heads' : 'tails';
   const creatorWon = call === result;
 
-  // If creator lost, swap pick orders
-  if (!creatorWon) {
-    const participants = await getDraftParticipants(draftId);
-    for (const p of participants) {
-      const newOrder = p.pickOrder === 1 ? 2 : 1;
-      await db.update(draftParticipants)
-        .set({ pickOrder: newOrder })
-        .where(and(eq(draftParticipants.draftId, draftId), eq(draftParticipants.userId, p.userId)));
+  await db.transaction(async (tx) => {
+    // If creator lost, swap pick orders
+    if (!creatorWon) {
+      const participants = await tx
+        .select({ userId: draftParticipants.userId, pickOrder: draftParticipants.pickOrder })
+        .from(draftParticipants)
+        .where(eq(draftParticipants.draftId, draftId));
+      for (const p of participants) {
+        const newOrder = p.pickOrder === 1 ? 2 : 1;
+        await tx.update(draftParticipants)
+          .set({ pickOrder: newOrder })
+          .where(and(eq(draftParticipants.draftId, draftId), eq(draftParticipants.userId, p.userId)));
+      }
     }
-  }
 
-  await db.update(drafts)
-    .set({ coinTossCall: call, coinTossResult: result, status: 'drafting', currentPickNumber: 1 })
-    .where(eq(drafts.id, draftId));
+    await tx.update(drafts)
+      .set({ coinTossCall: call, coinTossResult: result, status: 'drafting', currentPickNumber: 1 })
+      .where(eq(drafts.id, draftId));
+  });
 
   return { call, result, creatorWon };
 }

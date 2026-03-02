@@ -3,6 +3,12 @@ import { authGuard } from '../middleware/auth.js';
 import { createDraftSchema, makeDraftPickSchema, coinTossCallSchema } from '@nba-gm/shared';
 import * as draftService from '../services/draft.js';
 
+function parseId(raw: string): number {
+  const id = parseInt(raw, 10);
+  if (Number.isNaN(id)) throw { statusCode: 400, message: 'Invalid ID parameter' };
+  return id;
+}
+
 export async function draftRoutes(app: FastifyInstance) {
   // Create a new draft
   app.post('/api/drafts', { preHandler: authGuard }, async (request, reply) => {
@@ -29,7 +35,7 @@ export async function draftRoutes(app: FastifyInstance) {
 
   // Get draft by ID (full state)
   app.get<{ Params: { id: string } }>('/api/drafts/:id', { preHandler: authGuard }, async (request, reply) => {
-    const draftId = parseInt(request.params.id);
+    const draftId = parseId(request.params.id);
     const draft = await draftService.getDraftById(draftId);
     if (!draft) return reply.status(404).send({ error: 'Not found', message: 'Draft not found' });
 
@@ -67,6 +73,7 @@ export async function draftRoutes(app: FastifyInstance) {
 
   // Call coin toss
   app.post<{ Params: { id: string } }>('/api/drafts/:id/coin-toss', { preHandler: authGuard }, async (request, reply) => {
+    const draftId = parseId(request.params.id);
     const parsed = coinTossCallSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Validation error', message: parsed.error.message });
@@ -74,7 +81,7 @@ export async function draftRoutes(app: FastifyInstance) {
 
     try {
       const result = await draftService.callCoinToss(
-        parseInt(request.params.id),
+        draftId,
         request.user!.userId,
         parsed.data.call,
       );
@@ -89,28 +96,36 @@ export async function draftRoutes(app: FastifyInstance) {
     '/api/drafts/:id/players',
     { preHandler: authGuard },
     async (request, reply) => {
-      const draft = await draftService.getDraftById(parseInt(request.params.id));
-      if (!draft) return reply.status(404).send({ error: 'Not found', message: 'Draft not found' });
+      try {
+        const draftId = parseId(request.params.id);
+        const draft = await draftService.getDraftById(draftId);
+        if (!draft) return reply.status(404).send({ error: 'Not found', message: 'Draft not found' });
 
-      const q = request.query;
-      const picks = await draftService.getDraftPicks(parseInt(request.params.id));
-      const excludePlayerIds = picks.map(p => p.playerId);
-      const result = await draftService.getPlayerPool(draft.criteria as any, {
-        search: q.search,
-        position: q.position as any,
-        page: q.page ? parseInt(q.page) : undefined,
-        limit: q.limit ? parseInt(q.limit) : undefined,
-        sortBy: q.sortBy,
-        sortOrder: q.sortOrder as any,
-        excludePlayerIds,
-      });
+        const q = request.query;
+        const picks = await draftService.getDraftPicks(draftId);
+        const excludePlayerIds = picks.map(p => p.playerId);
+        const result = await draftService.getPlayerPool(draft.criteria as any, {
+          search: q.search,
+          position: q.position as any,
+          page: q.page ? parseInt(q.page) : undefined,
+          limit: q.limit ? parseInt(q.limit) : undefined,
+          sortBy: q.sortBy,
+          sortOrder: q.sortOrder as any,
+          excludePlayerIds,
+        });
 
-      return result;
+        return result;
+      } catch (e: any) {
+        if (e.statusCode) return reply.status(e.statusCode).send({ error: 'Bad request', message: e.message });
+        request.log.error(e);
+        return reply.status(500).send({ error: 'Internal server error', message: 'Failed to load player pool' });
+      }
     }
   );
 
   // Make a draft pick
   app.post<{ Params: { id: string } }>('/api/drafts/:id/pick', { preHandler: authGuard }, async (request, reply) => {
+    const draftId = parseId(request.params.id);
     const parsed = makeDraftPickSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Validation error', message: parsed.error.message });
@@ -118,7 +133,7 @@ export async function draftRoutes(app: FastifyInstance) {
 
     try {
       const result = await draftService.makePick(
-        parseInt(request.params.id),
+        draftId,
         request.user!.userId,
         parsed.data.playerId,
         parsed.data.position,

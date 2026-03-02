@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useDraftStore } from '@/stores/draft';
 import { useAuthStore } from '@/stores/auth';
 import { useSeriesStore } from '@/stores/series';
+import * as api from '@/api';
 import { POSITIONS, getPickOrder } from '@nba-gm/shared';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -88,7 +89,7 @@ onMounted(async () => {
   } catch (e: any) {
     error.value = 'Failed to load player pool. Please refresh the page.';
   }
-  if (!isLocal.value && (draft.value?.status === 'drafting' || draft.value?.status === 'coin_toss')) {
+  if (!isLocal.value && (draft.value?.status === 'drafting' || draft.value?.status === 'coin_toss' || draft.value?.status === 'complete')) {
     draftStore.startPolling(draftId);
   }
 });
@@ -128,6 +129,22 @@ watch(search, () => {
     page.value = 1;
     loadPlayers();
   }, 300);
+});
+
+// When the draft transitions to complete, redirect to series page
+watch(() => draft.value?.status, async (status) => {
+  if (status === 'complete') {
+    try {
+      const res = await api.getDraftSeries(draftId);
+      const seriesList = res.data.data;
+      if (seriesList.length > 0) {
+        draftStore.stopPolling();
+        router.push(`/series/${seriesList[0].id}`);
+      }
+    } catch {
+      // Series not created yet, polling will retry
+    }
+  }
 });
 
 function openPickDialog(player: any) {
@@ -339,7 +356,7 @@ function clearFilters() {
       <h3 class="text-lg font-semibold mb-2">Available Players</h3>
       <div class="flex flex-col sm:flex-row gap-2 mb-4">
         <InputText v-model="search" placeholder="Search players..." class="flex-1" />
-        <Select v-model="selectedPosition" :options="['', ...POSITIONS]" placeholder="Position" @change="onPositionChange" />
+        <Select v-model="selectedPosition" :options="[{ label: 'All Positions', value: '' }, ...POSITIONS.map(p => ({ label: p, value: p }))]" optionLabel="label" optionValue="value" placeholder="Position" @change="onPositionChange" />
       </div>
 
       <div class="overflow-x-auto">
@@ -348,6 +365,7 @@ function clearFilters() {
           stripedRows
           size="small"
           lazy
+          sortMode="single"
           :sortField="sortField"
           :sortOrder="sortOrder"
           @sort="onSort"

@@ -22,6 +22,13 @@
       "when": 1772488218018,
       "tag": "0002_lyrical_zodiak",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772489197540,
+      "tag": "0003_clumsy_imperial_guard",
+      "breakpoints": true
     }
   ]
 }
