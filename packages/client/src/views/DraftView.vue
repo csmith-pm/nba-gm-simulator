@@ -75,7 +75,11 @@ const shareUrl = computed(() => {
 
 onMounted(async () => {
   await draftStore.fetchDraft(draftId);
-  await loadPlayers();
+  try {
+    await loadPlayers();
+  } catch (e: any) {
+    error.value = 'Failed to load player pool. Please refresh the page.';
+  }
   if (draft.value?.status === 'drafting' && !isLocal.value) {
     draftStore.startPolling(draftId);
   }
