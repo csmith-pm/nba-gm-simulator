@@ -153,38 +153,46 @@ def ingest():
                     continue
                 player_id = result[0]
 
-            # Get career stats
-            time.sleep(DELAY)
-            career = PlayerCareerStats(player_id=nba_id, per_mode36="PerGame").get_data_frames()
-
-            if len(career) > 0:
-                season_stats = career[0]  # Regular season per-game stats
-                stat_rows = []
-                for _, srow in season_stats.iterrows():
-                    stat_rows.append((
-                        player_id,
-                        str(srow.get("SEASON_ID", "")),
-                        safe_int(srow.get("GP", 0), 0),
-                        safe_float(srow.get("PTS", 0)),
-                        safe_float(srow.get("REB", 0)),
-                        safe_float(srow.get("AST", 0)),
-                        safe_float(srow.get("STL", 0)),
-                        safe_float(srow.get("BLK", 0)),
-                        safe_float(srow.get("FG_PCT", 0)),
-                        safe_float(srow.get("FT_PCT", 0)),
-                        safe_float(srow.get("FG3_PCT", 0)),
-                        safe_float(srow.get("MIN", 0)),
-                    ))
-
-                if stat_rows:
-                    with conn.cursor() as cur:
-                        execute_values(cur, """
-                            INSERT INTO player_season_stats
-                            (player_id, season, games_played, ppg, rpg, apg, spg, bpg, fg_pct, ft_pct, three_pct, minutes_pg)
-                            VALUES %s
-                        """, stat_rows)
-
+            # Commit the player first so it's saved even if stats fail
             conn.commit()
+
+            # Get career stats (may fail for players with minimal NBA time)
+            try:
+                time.sleep(DELAY)
+                career = PlayerCareerStats(player_id=nba_id, per_mode36="PerGame").get_data_frames()
+
+                if len(career) > 0:
+                    season_stats = career[0]  # Regular season per-game stats
+                    stat_rows = []
+                    for _, srow in season_stats.iterrows():
+                        stat_rows.append((
+                            player_id,
+                            str(srow.get("SEASON_ID", "")),
+                            safe_int(srow.get("GP", 0), 0),
+                            safe_float(srow.get("PTS", 0)),
+                            safe_float(srow.get("REB", 0)),
+                            safe_float(srow.get("AST", 0)),
+                            safe_float(srow.get("STL", 0)),
+                            safe_float(srow.get("BLK", 0)),
+                            safe_float(srow.get("FG_PCT", 0)),
+                            safe_float(srow.get("FT_PCT", 0)),
+                            safe_float(srow.get("FG3_PCT", 0)),
+                            safe_float(srow.get("MIN", 0)),
+                        ))
+
+                    if stat_rows:
+                        with conn.cursor() as cur:
+                            execute_values(cur, """
+                                INSERT INTO player_season_stats
+                                (player_id, season, games_played, ppg, rpg, apg, spg, bpg, fg_pct, ft_pct, three_pct, minutes_pg)
+                                VALUES %s
+                            """, stat_rows)
+
+                conn.commit()
+            except Exception as stat_err:
+                conn.rollback()
+                print(f"  WARN: No stats for {row['DISPLAY_FIRST_LAST']}: {stat_err}", file=sys.stderr)
+
             inserted += 1
 
             if inserted % 50 == 0:

@@ -59,6 +59,8 @@ export interface Draft {
   currentPickNumber: number;
   shareCode: string;
   mode: 'online' | 'local';
+  coinTossCall: string | null;
+  coinTossResult: string | null;
   createdAt: string;
 }
 

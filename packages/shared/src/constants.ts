@@ -1,7 +1,7 @@
 export const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'] as const;
 export type Position = (typeof POSITIONS)[number];
 
-export const DRAFT_STATUSES = ['waiting', 'drafting', 'complete'] as const;
+export const DRAFT_STATUSES = ['waiting', 'coin_toss', 'drafting', 'complete'] as const;
 export type DraftStatus = (typeof DRAFT_STATUSES)[number];
 
 export const SERIES_STATUSES = ['pending', 'in_progress', 'complete'] as const;
@@ -26,6 +26,16 @@ export function getPickOrder(pickNumber: number): 1 | 2 {
   const isReversed = round % 2 === 0;
   return (isReversed ? (3 - posInRound) : posInRound) as 1 | 2;
 }
+
+// MVP score weights
+export const MVP_WEIGHTS = {
+  PTS: 1.0,
+  REB: 0.7,
+  AST: 1.0,
+  STL: 1.5,
+  BLK: 1.5,
+  FGM: 0.5,
+} as const;
 
 // Position fit penalties (0 = perfect fit, higher = worse)
 export const POSITION_FIT_PENALTY: Record<Position, Record<Position, number>> = {

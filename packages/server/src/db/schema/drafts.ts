@@ -11,6 +11,8 @@ export const drafts = pgTable('drafts', {
   currentPickNumber: integer('current_pick_number').notNull().default(0),
   shareCode: varchar('share_code', { length: 21 }).notNull().unique(),
   mode: varchar('mode', { length: 10 }).notNull().default('online'),
+  coinTossCall: varchar('coin_toss_call', { length: 5 }),
+  coinTossResult: varchar('coin_toss_result', { length: 5 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

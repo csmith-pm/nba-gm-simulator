@@ -31,8 +31,8 @@ export async function createDraft(
       criteria,
       shareCode,
       mode: 'local',
-      status: 'drafting',
-      currentPickNumber: 1,
+      status: 'coin_toss',
+      currentPickNumber: 0,
     }).returning();
 
     // Both participants created immediately
@@ -80,10 +80,10 @@ export async function joinDraft(draftId: number, userId: number) {
     pickOrder: existing.length + 1,
   });
 
-  // If we now have 2 participants, start the draft
+  // If we now have 2 participants, move to coin toss
   if (existing.length + 1 === 2) {
     await db.update(drafts)
-      .set({ status: 'drafting', currentPickNumber: 1 })
+      .set({ status: 'coin_toss' })
       .where(eq(drafts.id, draftId));
   }
 
@@ -301,6 +301,37 @@ export async function getPlayerPool(criteria: DraftCriteria, options: {
     limit,
     totalPages: Math.ceil(count / limit),
   };
+}
+
+export async function callCoinToss(draftId: number, userId: number, call: 'heads' | 'tails') {
+  const draft = await getDraftById(draftId);
+  if (!draft || draft.status !== 'coin_toss') throw new Error('Draft is not in coin toss phase');
+  if (draft.createdBy !== userId) throw new Error('Only the draft creator can call the toss');
+
+  const result: 'heads' | 'tails' = Math.random() < 0.5 ? 'heads' : 'tails';
+  const creatorWon = call === result;
+
+  await db.transaction(async (tx) => {
+    // If creator lost, swap pick orders
+    if (!creatorWon) {
+      const participants = await tx
+        .select({ userId: draftParticipants.userId, pickOrder: draftParticipants.pickOrder })
+        .from(draftParticipants)
+        .where(eq(draftParticipants.draftId, draftId));
+      for (const p of participants) {
+        const newOrder = p.pickOrder === 1 ? 2 : 1;
+        await tx.update(draftParticipants)
+          .set({ pickOrder: newOrder })
+          .where(and(eq(draftParticipants.draftId, draftId), eq(draftParticipants.userId, p.userId)));
+      }
+    }
+
+    await tx.update(drafts)
+      .set({ coinTossCall: call, coinTossResult: result, status: 'drafting', currentPickNumber: 1 })
+      .where(eq(drafts.id, draftId));
+  });
+
+  return { call, result, creatorWon };
 }
 
 export async function getUserDrafts(userId: number) {

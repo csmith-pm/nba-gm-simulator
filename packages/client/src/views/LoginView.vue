@@ -46,7 +46,7 @@ async function handleLogin() {
           <Button type="submit" label="Sign In" :loading="auth.loading" />
           <p class="text-sm text-center text-text-secondary">
             Don't have an account?
-            <router-link to="/register" class="text-court-orange font-semibold hover:underline">Register</router-link>
+            <router-link :to="{ path: '/register', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="text-court-orange font-semibold hover:underline">Register</router-link>
           </p>
         </form>
       </template>

@@ -7,7 +7,7 @@ import { signToken, authGuard } from '../middleware/auth.js';
 import { registerSchema, loginSchema } from '@nba-gm/shared';
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post('/api/auth/register', async (request, reply) => {
+  app.post('/api/auth/register', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Validation error', message: parsed.error.message });
@@ -41,7 +41,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/api/auth/login', async (request, reply) => {
+  app.post('/api/auth/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Validation error', message: parsed.error.message });

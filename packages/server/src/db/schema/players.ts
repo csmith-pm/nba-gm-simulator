@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, varchar, real } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, varchar, real, index } from 'drizzle-orm/pg-core';
 
 export const players = pgTable('players', {
   id: serial('id').primaryKey(),
@@ -26,4 +26,6 @@ export const playerSeasonStats = pgTable('player_season_stats', {
   ftPct: real('ft_pct').notNull(),
   threePct: real('three_pct').notNull(),
   minutesPg: real('minutes_pg').notNull(),
-});
+}, (table) => [
+  index('idx_player_season_stats_player_id').on(table.playerId),
+]);

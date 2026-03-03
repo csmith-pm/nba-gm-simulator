@@ -35,6 +35,12 @@ export const createDraftSchema = z.object({
   { message: 'Player 2 name is required for local mode', path: ['team2Name'] }
 );
 
+// Coin toss
+export const coinTossCallSchema = z.object({
+  call: z.enum(['heads', 'tails']),
+});
+export type CoinTossCallInput = z.infer<typeof coinTossCallSchema>;
+
 // Draft pick
 export const makeDraftPickSchema = z.object({
   playerId: z.number().int().positive(),
