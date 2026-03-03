@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
@@ -10,6 +10,7 @@ import Card from 'primevue/card';
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 const email = ref('');
 const password = ref('');
@@ -20,7 +21,8 @@ async function handleRegister() {
   error.value = '';
   try {
     await auth.register(email.value, password.value, displayName.value);
-    router.push('/drafts');
+    const redirect = route.query.redirect as string;
+    router.push(redirect || '/drafts');
   } catch (e: any) {
     error.value = e.response?.data?.message || 'Registration failed';
   }
@@ -49,7 +51,7 @@ async function handleRegister() {
           <Button type="submit" label="Create Account" :loading="auth.loading" />
           <p class="text-sm text-center text-text-secondary">
             Already have an account?
-            <router-link to="/login" class="text-court-orange font-semibold hover:underline">Sign in</router-link>
+            <router-link :to="{ path: '/login', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="text-court-orange font-semibold hover:underline">Sign in</router-link>
           </p>
         </form>
       </template>
