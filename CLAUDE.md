@@ -43,14 +43,22 @@ scripts/           — Python data ingestion (nba_api → Postgres)
 - Draft share codes use nanoid
 - **Local two-player mode**: `drafts.mode` column (`online` | `local`). Local mode creates a guest user (unhashable password `!`) for Player 2, starts drafting immediately with both participants. Both teams pick from the same screen — server assigns picks via snake order regardless of requesting userId. Local games excluded from leaderboard. SeriesView shows participant display names for both modes.
 
-## Development Workflow
-1. Create a feature branch from master
-2. Implement changes
-3. Write/update tests for changed code
-4. Run `pnpm -r test` — all tests must pass
-5. Commit (one commit per milestone for multi-step work)
-6. Push branch and open a PR to master
-7. Review, approve, and merge
+## Development Workflow — MANDATORY
+You MUST follow every step below for ALL code changes. NEVER skip steps. NEVER commit directly to master.
+
+1. **Create a feature branch from master** — Do this FIRST, before writing any code. Use descriptive names like `feat/dark-mode` or `fix/draft-timer-bug`.
+2. **Implement changes** on the feature branch.
+3. **Write/update tests** for changed code.
+4. **Run `pnpm -r test`** — ALL tests must pass before committing.
+5. **Commit** with a clear message (one commit per milestone for multi-step work).
+6. **Push the branch** and **open a PR to master** using `gh pr create`.
+7. Do NOT merge — leave the PR for review.
+
+### Rules
+- NEVER commit directly to master. Always use a feature branch + PR.
+- NEVER skip creating the branch. If you realize you forgot, stash changes, create the branch, then reapply.
+- NEVER skip running tests before committing.
+- When planning work, the FIRST action in execution must be `git checkout -b <branch-name>`.
 
 ## Current Status
 - Phase 1-6 complete: project structure, shared types, DB schema, server routes/services, client views/stores, Python ingestion script
