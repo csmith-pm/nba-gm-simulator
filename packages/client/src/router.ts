@@ -74,16 +74,18 @@ router.beforeEach(async (to) => {
 
 // In embed mode, persist route to localStorage so iframe refreshes restore it
 if (isEmbed) {
+  // Read saved route BEFORE router resolves (afterEach would overwrite it)
+  const savedRoute = localStorage.getItem(EMBED_ROUTE_KEY);
+
   router.afterEach((to) => {
-    if (to.path !== '/login' && to.path !== '/register') {
+    if (to.path !== '/' && to.path !== '/login' && to.path !== '/register') {
       localStorage.setItem(EMBED_ROUTE_KEY, to.fullPath);
     }
   });
 
   router.isReady().then(() => {
-    const saved = localStorage.getItem(EMBED_ROUTE_KEY);
-    if (saved && router.currentRoute.value.path === '/') {
-      router.replace(saved);
+    if (savedRoute && savedRoute !== '/' && router.currentRoute.value.path === '/') {
+      router.replace(savedRoute);
     }
   });
 }
